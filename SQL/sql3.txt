@@ -1,95 +1,0 @@
-Query 1 :WITH BASE AS
-(SELECT CUST, MAX(QUANT) MAX_Q, MIN(QUANT) MIN_Q, ROUND(AVG(QUANT),0) AVERAGE
-FROM SALES
-GROUP BY CUST),
-
-MAX_QUANT AS
-(SELECT a.CUST, MAX_Q, PROD AS MAX_PROD, CONCAT(b.month,'/',b.day,'/',b.year) AS MAX_DT, STATE AS MAX_ST, AVERAGE 
- FROM BASE a, SALES b
- WHERE MAX_Q = QUANT AND a.CUST =b.CUST
-), 
-MIN_QUANT AS
-(SELECT a.CUST, MIN_Q, PROD AS MIN_PROD, CONCAT(b.month,'/',b.day,'/',b.year) AS MIN_DT, STATE AS MIN_ST
- FROM BASE a, SALES b
- WHERE MIN_Q = QUANT AND a.CUST =b.CUST
-)
-
-SELECT a.CUST, MIN_Q, MIN_PROD, MIN_DT, MIN_ST, MAX_Q, MAX_PROD,  MAX_DT, MAX_ST, AVERAGE
-FROM MAX_QUANT a, MIN_QUANT b
-where a.CUST = b.CUST 
-
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------Query 2 :WITH JAN_MINI AS
-(
-select cust, prod, min(quant) jan_min
-from sales
-where month = 01
-group by cust, prod
-),
-JAN AS 
-(
-SELECT a.cust, b.prod, jan_min, CONCAT(b.month,'/',b.day,'/',b.year) AS JAN_DATE 
-FROM JAN_MINI a, sales b
-WHERE a.cust=b.cust
-	and a.prod=b.prod
-	and a.jan_min=b.quant
-),
-
-FEB_MAXI AS
-(
-select cust, prod, max(quant) feb_max
-from sales
-where month = 02
-group by cust, prod
-),
-FEB AS 
-(
-SELECT a.cust, b.prod, feb_max, CONCAT(b.month,'/',b.day,'/',b.year) AS FEB_DATE
-FROM FEB_MAXI a, sales b
-WHERE a.cust=b.cust
-	and a.prod=b.prod
-	and a.feb_max=b.quant
-),
-
-MAR_MAXI AS
-(
-select cust, prod, max(quant) mar_max
-from sales
-where month = 03
-group by cust, prod
-),
-MAR AS 
-(
-SELECT a.cust, b.prod, mar_max, CONCAT(b.month,'/',b.day,'/',b.year) AS MAR_DATE 
-FROM MAR_MAXI a, sales b
-WHERE a.cust=b.cust
-	and a.prod=b.prod
-	and a.mar_max=b.quant
-)
-
-SELECT CUST, PROD, JAN_MIN, JAN_DATE, FEB_MAX, FEB_DATE, MAR_MAX, MAR_DATE  FROM 
-
-( Select JAN_MINI.cust, JAN_MINI.prod, JAN_MINI.jan_min AS jan_min, JAN_DATE 
-from JAN_MINI, JAN
-WHERE JAN_MINI.cust = JAN.cust
-AND JAN_MINI.prod = JAN.prod) T1 
-NATURAL FULL JOIN
-( Select FEB_MAXI.cust, FEB_MAXI.prod, FEB_MAXI.feb_max AS FEB_MAX , FEB_DATE 
-from FEB_MAXI, FEB
-WHERE FEB_MAXI.cust = FEB.cust
-AND FEB_MAXI.prod = FEB.prod) T2 
-NATURAL FULL JOIN
-( Select MAR_MAXI.cust, MAR_MAXI.prod, MAR_MAXI.mar_max as MAR_MAX, MAR_DATE 
-from MAR_MAXI, MAR
-WHERE MAR_MAXI.cust = MAR.cust
-AND MAR_MAXI.prod = MAR.prod) T3
-NATURAL FULL JOIN
-(SELECT * FROM 
-(SELECT distinct(cust) from sales)S1 NATURAL FULL JOIN (SELECT distinct(PROD) from sales)S2 )T4
-
-ORDER BY CUST, PROD
-
-
-
-
-
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------Query 3 :WITH BASE AS (SELECT MONTH, PROD, SUM(QUANT) TOTAL_QFROM SALESGROUP BY MONTH, PROD),MAXI_MINI AS(SELECT MONTH, max(TOTAL_Q) MAX_Q, min(TOTAL_Q) MIN_QFROM BASE  GROUP BY MONTH),PROD_MAX AS(SELECT a.MONTH, b.PROD, MAX_Q, MIN_QFROM MAXI_MINI a, BASE b WHERE a.MONTH = b.MONTH AND MAX_Q = TOTAL_Q ), PROD_MIN AS(SELECT a.MONTH, b.PROD, MIN_QFROM MAXI_MINI a, BASE b WHERE a.MONTH = b.MONTH AND MIN_Q = TOTAL_Q ) SELECT a.MONTH, a.PROD AS MOST_POPULAR_PROD, a.MAX_Q AS MOST_POP_TOTAL_Q, b.PROD AS LEAST_POPULAR_PROD, a.MIN_Q AS LEAST_POP_TOTAL_Qfrom PROD_MAX a, BASE bwhere a.MONTH = b.MONTH and a.MIN_Q = b.TOTAL_QORDER BY  MONTH------------------------------------------------------------------------------------------------------------------------------------------------------------------------------Query 4 :WITH BASE AS (SELECT MONTH, PROD, SUM(QUANT) TOTAL_QFROM SALESGROUP BY MONTH, PROD),MON_MAXI_MINI AS(SELECT PROD, max(TOTAL_Q) MAX_Q, min(TOTAL_Q) MIN_QFROM BASE  GROUP BY PROD ), MON_MAX AS(SELECT a.PROD, b.MONTH, a.MAX_Q, MIN_QFROM MON_MAXI_MINI a, BASE bWHERE a.PROD=b.PROD AND a.MAX_Q = b.TOTAL_Q)SELECT a.PROD as PRODUCT, a.MONTH as MOST_FAV_MO ,  b.month as LEAST_FAV_MOFROM MON_MAX a , BASE bWHERE a.PROD=b.PROD AND a.MIN_Q = b.TOTAL_QORDER BY a.PROD------------------------------------------------------------------------------------------------------------------------------------------------------------------------------Query 5 :WITH BASE AS(SELECT CUST, PROD, CT_AVG, NJ_AVG, NY_AVG, PA_AVG FROM (SELECT CUST, PROD, ROUND(AVG(QUANT),2) AS CT_AVG FROM SALES WHERE STATE = 'CT' GROUP BY CUST, PROD) T1NATURAL FULL JOIN(SELECT CUST, PROD, ROUND(AVG(QUANT),2) AS NJ_AVG FROM SALES WHERE STATE = 'NJ' GROUP BY CUST, PROD) T2NATURAL FULL JOIN(SELECT CUST, PROD, ROUND(AVG(QUANT),2) AS NY_AVG FROM SALES WHERE STATE = 'NY' GROUP BY CUST, PROD) T3NATURAL FULL JOIN(SELECT CUST, PROD, ROUND(AVG(QUANT),2) AS PA_AVG FROM SALES WHERE STATE = 'PA' GROUP BY CUST, PROD) T4),AVG_TOT_CNT AS(SELECT CUST, PROD, ROUND(AVG(QUANT),2) AVERAGE, SUM(QUANT) AS TOTAL, COUNT(QUANT) AS COUNT FROM SALES GROUP BY CUST, PROD )SELECT a.CUST, a.PROD, CT_AVG, NJ_AVG, NY_AVG, PA_AVG, AVERAGE, TOTAL, COUNTFROM BASE a, AVG_TOT_CNT bWHERE a.CUST =  b.CUSTAND a.PROD =  b.PRODORDER BY  a.CUST, a.PROD
