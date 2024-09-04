@@ -1,0 +1,321 @@
+Solution 1-
+
+WITH Q1 AS
+(SELECT MAX_QUANT, PROD AS MAX_PROD, STATE AS MAX_ST, concat(month,'/',day,'/',year) as max_date FROM sales  S1 NATURAL FULL JOIN
+(Select CUST, max(QUANT) AS MAX_QUANT FROM SALES GROUP BY CUST ORDER BY CUST ) S2 
+ WHERE QUANT = MAX_QUANT ),
+Q2 AS
+(SELECT MIN_QUANT, PROD AS MIN_PROD, STATE AS MIN_ST, concat(month,'/',day,'/',year) as min_date FROM sales  S1 NATURAL FULL JOIN
+(Select CUST, MIN(QUANT) AS MIN_QUANT FROM SALES  GROUP BY CUST ORDER BY CUST ) S2 
+WHERE QUANT = MIN_QUANT   ) ,
+Q3 AS
+(SELECT CUST, ROUND(AVG(QUANT),2) AS AVERG FROM SALES GROUP BY CUST) 
+SELECT  CUST, MAX_PROD, MAX_QUANT, MAX_ST, max_date, MIN_PROD, MIN_QUANT,  MIN_ST, min_date  , AVERG
+FROM Q1 NATURAL FULL JOIN Q2 NATURAL FULL JOIN Q3
+ORDER BY CUST
+
+
+Solutions 2-
+
+SELECT * FROM
+( SELECT CUST, PROD, quant AS JAN_MIN, CONCAT(month,'/',day,'/',year) AS JAN_DATE 
+FROM SALES a WHERE quant = (select min(quant) from sales where cust = a.cust and prod = a.prod  and MONTH = 01 GROUP BY CUST, PROD )  ORDER BY CUST ) T1 NATURAL FULL JOIN
+
+( SELECT CUST, PROD, quant AS FEB_MAX, CONCAT(month,'/',day,'/',year) AS FEB_DATE FROM SALES b WHERE quant = (select MAX(quant) from sales where cust = b.cust and prod = b.prod  and MONTH = 02 GROUP BY CUST, PROD )  ORDER BY CUST ) T2 NATURAL FULL JOIN
+
+( SELECT CUST, PROD, quant AS MAR_MAX, CONCAT(month,'/',day,'/',year) AS MAR_DATE FROM SALES c WHERE quant = (select MAX(quant) from sales where cust = c.cust and prod = c.prod  and MONTH = 03 GROUP BY CUST, PROD  ) ORDER BY CUST ) T3 NATURAL FULL JOIN
+
+(SELECT * FROM 
+(select distinct(cust) from sales) S1,
+(select distinct(prod) from sales ) S2
+) T4
+ORDER BY CUST,PROD
+
+
+Solution 3- 
+
+WITH Q1 AS 
+(select month, Min_quant, LEAST_PROFIT_DAY, LEAST_PROFIT_TOTAL_Q  from
+(select day as LEAST_PROFIT_DAY, quant, SUM(QUANT) AS LEAST_PROFIT_TOTAL_Q from sales GROUP BY DAY, QUANT) S1 Natural full join
+(select month, min(quant) as Min_quant from sales group by month  ) S2
+where quant = min_quant
+order by month ),
+Q2 AS
+(select month, Max_quant, MOST_PROFIT_DAY, MOST_PROFIT_TOTAL_Q  from
+(select day as MOST_PROFIT_DAY, quant, SUM(QUANT) AS MOST_PROFIT_TOTAL_Q from sales GROUP BY DAY, QUANT ) S1 Natural full join
+(select month, max(quant) as Max_quant from sales group by month  ) S2
+where quant = Max_quant
+order by month),
+Q3 AS
+(select distinct(month) from sales)
+select  month, Min_quant, LEAST_PROFIT_DAY , LEAST_PROFIT_TOTAL_Q, Max_quant, MOST_PROFIT_DAY , MOST_PROFIT_TOTAL_Q
+from Q1  Natural full join Q2  Natural full join Q3 
+
+
+
+
+
+
+
+
+
+
+
+Solution 4-
+
+Select PROD, MIN_MONTH, min_no , MAX_MONTH, max_no 
+FROM
+(SELECT PROD, MIN_MONTH, min_no 
+FROM
+(select prod, month MIN_MONTH, sum(quant) as sum_prod  from sales group by prod, month ) T1
+Natural full join
+(select prod, min(sum_prod) as min_no from 
+( select prod, month, sum(quant) as sum_prod  from sales group by prod, month ) A
+group by prod) T2
+WHERE sum_prod = min_no ) S1
+Natural full join
+( SELECT PROD, MAX_MONTH, max_no 
+FROM
+(select prod, month MAX_MONTH, sum(quant) as sum_prod  from sales group by prod, month ) T1
+Natural full join
+(select prod, max(sum_prod) as max_no from 
+( select prod, month, sum(quant) as sum_prod  from sales group by prod, month ) A
+group by prod) T2
+WHERE sum_prod = max_no ) S2
+ORDER BY PROD
+
+
+
+
+
+
+
+Solution 5- 
+ 
+SELECT cust, prod, NJ_MAX, NJ_DT, NY_MAX, NY_DT, CT_MAX, CT_DT
+FROM 
+(select cust, prod, NJ_MAX, concat(month,'/',day,'/',year) as NJ_DT 
+FROM SALES t1 Natural full join
+(Select cust, prod, MAX(quant) as NJ_MAX from sales where state = 'NJ' group by cust, prod) t2
+where quant = NJ_MAX) S1
+Natural full join
+(select cust, prod, NY_MAX, concat(month,'/',day,'/',year) as NY_DT 
+FROM SALES t1 Natural full join
+(Select cust, prod, MAX(quant) as NY_MAX from sales where state = 'NY' group by cust, prod) t2
+where quant = NY_MAX) S2
+Natural full join
+(select cust, prod, CT_MAX, concat(month,'/',day,'/',year) as CT_DT 
+FROM SALES t1 Natural full join
+(Select cust, prod, MAX(quant) as CT_MAX from sales where state = 'CT' group by cust, prod) t2
+where quant = CT_MAX) S3
+ORDER BY CUST,PROD
+
+
+
+
+
+----------------------------------------------------------------------------------------------------------------
+
+----------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+NEW_Solution 1 :
+
+WITH BASE AS
+(SELECT CUST, MAX(QUANT) MAX_Q, MIN(QUANT) MIN_Q, ROUND(AVG(QUANT),0) AVERAGE
+FROM SALES
+GROUP BY CUST),
+
+MAX_QUANT AS
+(SELECT a.CUST, MAX_Q, PROD AS MAX_PROD, CONCAT(b.month,'/',b.day,'/',b.year) AS MAX_DT, STATE AS MAX_ST, AVERAGE
+ FROM BASE a, SALES b
+ WHERE MAX_Q = QUANT 
+), 
+MIN_QUANT AS
+(SELECT a.CUST, MIN_Q, PROD AS MIN_PROD, CONCAT(b.month,'/',b.day,'/',b.year) AS MIN_DT, STATE AS MIN_ST
+ FROM BASE a, SALES b
+ WHERE MIN_Q = QUANT 
+)
+
+SELECT a.CUST, MIN_Q, MIN_PROD, MIN_DT, MIN_ST, MAX_Q, MAX_PROD,  MAX_DT, MAX_ST, AVERAGE
+FROM MAX_QUANT a, MIN_QUANT b
+where a.CUST = b.CUST
+
+
+
+NEW_Solution 2 :
+
+WITH JAN_MINI AS
+(
+select cust, prod, min(quant) jan_min
+from sales
+where month = 01
+group by cust, prod
+),
+JAN AS 
+(
+SELECT a.cust, b.prod, jan_min, CONCAT(b.month,'/',b.day,'/',b.year) AS JAN_DT 
+FROM JAN_MINI a, sales b
+WHERE a.cust=b.cust
+	and a.prod=b.prod
+	and a.jan_min=b.quant
+),
+
+FEB_MAXI AS
+(
+select cust, prod, max(quant) feb_max
+from sales
+where month = 02
+group by cust, prod
+),
+FEB AS 
+(
+SELECT a.cust, b.prod, feb_max, CONCAT(b.month,'/',b.day,'/',b.year) AS FEB_DT 
+FROM FEB_MAXI a, sales b
+WHERE a.cust=b.cust
+	and a.prod=b.prod
+	and a.feb_max=b.quant
+),
+
+MAR_MAXI AS
+(
+select cust, prod, max(quant) mar_max
+from sales
+where month = 03
+group by cust, prod
+),
+MAR AS 
+(
+SELECT a.cust, b.prod, mar_max, CONCAT(b.month,'/',b.day,'/',b.year) AS MAR_DT 
+FROM MAR_MAXI a, sales b
+WHERE a.cust=b.cust
+	and a.prod=b.prod
+	and a.mar_max=b.quant
+)
+
+SELECT * FROM 
+
+( Select JAN_MINI.cust, JAN_MINI.prod, JAN_MINI.jan_min, JAN_DT 
+from JAN_MINI, JAN
+WHERE JAN_MINI.cust = JAN.cust
+AND JAN_MINI.prod = JAN.prod) T1 
+NATURAL INNER JOIN
+( Select FEB_MAXI.cust, FEB_MAXI.prod, FEB_MAXI.feb_max, FEB_DT 
+from FEB_MAXI, FEB
+WHERE FEB_MAXI.cust = FEB.cust
+AND FEB_MAXI.prod = FEB.prod) T2 
+NATURAL INNER JOIN
+( Select MAR_MAXI.cust, MAR_MAXI.prod, MAR_MAXI.mar_max, MAR_DT 
+from MAR_MAXI, MAR
+WHERE MAR_MAXI.cust = MAR.cust
+AND MAR_MAXI.prod = MAR.prod) T3
+
+ORDER BY CUST, PROD
+
+
+
+NEW_Solution 3 :
+
+WITH BASE AS 
+(SELECT MONTH, PROD, SUM(QUANT) TOTAL_Q
+FROM SALES
+GROUP BY MONTH, PROD),
+
+MAXI_MINI AS
+(SELECT MONTH, max(TOTAL_Q) MAX_Q, min(TOTAL_Q) MIN_Q
+FROM BASE  
+GROUP BY MONTH),
+
+PROD_MAX AS
+(SELECT a.MONTH, b.PROD, MAX_Q, MIN_Q
+FROM MAXI_MINI a, BASE b 
+WHERE a.MONTH = b.MONTH
+ AND MAX_Q = TOTAL_Q ),
+ 
+PROD_MIN AS
+(SELECT a.MONTH, b.PROD, MIN_Q
+FROM MAXI_MINI a, BASE b 
+WHERE a.MONTH = b.MONTH
+ AND MIN_Q = TOTAL_Q )
+ 
+SELECT a.MONTH, a.PROD AS MOST_POPULAR_PROD, a.MAX_Q AS MOST_POP_TOTAL_Q, b.PROD AS LEAST_POPULAR_PROD, a.MIN_Q AS LEAST_POP_TOTAL_Q
+from PROD_MAX a, BASE b
+where a.MONTH = b.MONTH and a.MIN_Q = b.TOTAL_Q
+
+ORDER BY  MONTH
+
+
+NEW_Solution 4 :
+
+WITH BASE AS 
+(SELECT MONTH, PROD, SUM(QUANT) TOTAL_Q
+FROM SALES
+GROUP BY MONTH, PROD),
+
+MON_MAXI_MINI AS
+(SELECT PROD, max(TOTAL_Q) MAX_Q, min(TOTAL_Q) MIN_Q
+FROM BASE  
+GROUP BY PROD ),
+ 
+MON_MAX AS
+(SELECT a.PROD, b.MONTH, a.MAX_Q, MIN_Q
+FROM MON_MAXI_MINI a, BASE b
+WHERE a.PROD=b.PROD
+ AND a.MAX_Q = b.TOTAL_Q
+
+)
+
+SELECT a.PROD, a.MONTH, a.MAX_Q, b.month, MIN_Q
+FROM MON_MAX a , BASE b
+WHERE a.PROD=b.PROD 
+AND a.MIN_Q = b.TOTAL_Q
+ORDER BY PROD
+
+
+
+
+NEW_Solution 5 :
+
+
+WITH BASE AS
+(
+SELECT CUST, PROD, CT_AVG, NJ_AVG, NY_AVG, PA_AVG FROM 
+(SELECT CUST, PROD, ROUND(AVG(QUANT),0) AS CT_AVG FROM SALES WHERE STATE = 'CT' GROUP BY CUST, PROD) T1
+NATURAL FULL JOIN
+(SELECT CUST, PROD, ROUND(AVG(QUANT),0) AS NJ_AVG FROM SALES WHERE STATE = 'NJ' GROUP BY CUST, PROD) T2
+NATURAL FULL JOIN
+(SELECT CUST, PROD, ROUND(AVG(QUANT),0) AS NY_AVG FROM SALES WHERE STATE = 'NY' GROUP BY CUST, PROD) T3
+NATURAL FULL JOIN
+(SELECT CUST, PROD, ROUND(AVG(QUANT),0) AS PA_AVG FROM SALES WHERE STATE = 'PA' GROUP BY CUST, PROD) T4
+),
+AVG_TOT_CNT AS
+(SELECT CUST, PROD, ROUND(AVG(QUANT),0) AVERAGE, SUM(QUANT) AS TOTAL, COUNT(QUANT) AS COUNT
+ FROM SALES
+ GROUP BY CUST, PROD 
+)
+
+SELECT a.CUST, a.PROD, CT_AVG, NJ_AVG, NY_AVG, PA_AVG, AVERAGE, TOTAL, COUNT
+FROM BASE a, AVG_TOT_CNT b
+WHERE a.CUST =  b.CUST
+AND a.PROD =  b.PROD
+ORDER BY  a.CUST, a.PROD
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
