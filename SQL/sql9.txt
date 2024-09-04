@@ -1,0 +1,158 @@
+
+select distinct(prod), count(prod) from sales group by prod
+
+
+
+select cust, month as mon , count(prod)
+ from sales 
+ group by mon, cust
+ order by cust, mon
+
+select cust, prod, month , sum(quant)
+from sales
+group by month, prod,  cust
+order by cust, prod, month
+
+
+
+
+SELECT * FROM
+(select cust, prod, month ,sum(quant) from sales 
+ group by month, prod,  cust
+order by cust, prod, month) S1
+NATURAL FULL JOIN
+(select * 
+FROM (select distinct(cust) from sales) I1,
+(select distinct(prod) from sales)I2,
+(select distinct(month) from sales)I3
+ORDER BY
+CUST,PROD,MONTH) S2
+
+————————
+
+CREATE VIEW VIEW2 AS
+SELECT * FROM
+(select cust, prod, month ,sum(quant) as total from sales 
+ group by month, prod,  cust
+order by cust, prod, month) S1
+NATURAL FULL JOIN
+(select * 
+FROM (select distinct(cust) from sales) I1,
+(select distinct(prod) from sales)I2,
+(select distinct(month) from sales)I3
+ORDER BY
+CUST,PROD,MONTH) S2
+
+select cust,prod, month from
+(select * from view2) s1 natural join
+(select cust, prod,  max(total) as maximum from VIEW2 
+group by prod, cust
+order by cust, prod) S2
+where total = maximum
+
+
+——————————
+
+SELECT T1.CUST, MAX_PROD, MAX_QUANT, MAX_STATE ,max_date , MIN_PROD , MIN_QUANT, MIN_STATE , min_date
+FROM 
+(SELECT PROD AS MAX_PROD, MAX_QUANT, S2.CUST, S1.STATE AS MAX_STATE, concat(month,'/',day,'/',year) as max_date  FROM SALES S1 NATURAL FULL JOIN
+(Select cust, max(quant) AS MAX_QUANT from sales
+where cust in (select distinct(cust) from sales) 
+group by cust
+ORDER BY CUST) S2
+WHERE QUANT = MAX_QUANT ) T1
+NATURAL FULL JOIN
+(SELECT PROD AS MIN_PROD , MIN_QUANT, S2.CUST, S1.STATE AS MIN_STATE , concat(month,'/',day,'/',year) as min_date FROM SALES S1 NATURAL FULL JOIN
+(Select cust, min(quant) AS MIN_QUANT from sales
+where cust in (select distinct(cust) from sales) 
+group by cust
+ORDER BY CUST) S2
+WHERE QUANT = MIN_QUANT ) T2
+ORDER BY T1.CUST
+
+
+_—————————
+
+
+
+--select distinct(cust) from sales
+--select cust, prod, day, month, year, state, quant
+--select distinct(prod), count(prod) from sales group by prod
+-- select cust, max(quant) as max_quant , prod , min(quant) as min_quant  from sales   
+-- where cust in (select distinct(cust) from sales) 
+-- group by cust, prod
+-- order by cust, max_quant, min_quant 
+
+-- SELECT tabA.cust AS CUSTOMER, tabA.quant AS MAX_Q, tabA.prod AS PRODUCT, CONCAT(tabA.month,'/',tabA.day,'/',tabA.year) AS MAX_DATE, 
+-- tabA.state AS ST , tabB.quant AS MIN_Q, tabB.prod AS PRODUCT, CONCAT(tabB.month,'/',tabB.day,'/',tabB.year)AS MIN_DATE, tabB.state AS ST, 
+-- ROUND(tabC.AVERAGE,0)
+
+-- FROM (SELECT DISTINCT ON (cust) cust, quant, prod, day, month, year, state FROM sales ORDER BY cust, quant DESC) tabA , 
+-- (SELECT DISTINCT ON (cust) cust, quant, prod, day, month, year, state FROM sales ORDER BY cust, quant ASC) tabB ,
+-- (SELECT cust , AVG(quant) AS AVERAGE FROM sales GROUP BY cust) tabC
+-- WHERE tabA.cust=tabB.cust AND tabA.cust= tabC.cust
+
+
+-- SELECT T1.CUST, MAX_PROD, MAX_QUANT, MAX_STATE ,max_date , MIN_PROD , MIN_QUANT, MIN_STATE , min_date
+-- FROM 
+-- (SELECT PROD AS MAX_PROD, MAX_QUANT, S2.CUST, S1.STATE AS MAX_STATE, concat(month,'/',day,'/',year) as max_date  FROM SALES S1 NATURAL FULL JOIN
+-- (Select cust, max(quant) AS MAX_QUANT from sales
+-- where cust in (select distinct(cust) from sales) 
+-- group by cust
+-- ORDER BY CUST) S2
+-- WHERE QUANT = MAX_QUANT ) T1
+-- NATURAL FULL JOIN
+-- (SELECT PROD AS MIN_PROD , MIN_QUANT, S2.CUST, S1.STATE AS MIN_STATE , concat(month,'/',day,'/',year) as min_date FROM SALES S1 NATURAL FULL JOIN
+-- (Select cust, min(quant) AS MIN_QUANT from sales
+-- where cust in (select distinct(cust) from sales) 
+-- group by cust
+-- ORDER BY CUST) S2
+-- WHERE QUANT = MIN_QUANT ) T2
+-- ORDER BY T1.CUST
+
+
+-- SELECT * FROM
+-- (select cust, prod , MAX(QUANT) FROM SALES
+-- GROUP BY CUST, PROD )S1
+-- Natural full join 
+-- (select  * from 
+-- (select distinct(cust) from sales) T1,
+-- (select DISTINCT(prod) from sales) T2
+-- GROUP BY PROD, CUST
+-- ORDER BY CUST, PROD )S2
+-- ORDER BY CUST, PROD
+
+--select * from sales where quant=26 order by quant
+
+--SELECT * FROM SALES WHERE QUANT = 26 AND CUST ='Emily' and prod = 'Fruits'
+
+-- SELECT T2.cust, max(quant) AS MAX_QUANT, T2.PROD, T1.STATE FROM SALES T1,
+-- ( Select cust, max(quant) AS MAX_QUANT, PROD from sales
+-- where cust in (select distinct(cust) from sales) 
+-- group by cust, PROD
+-- ORDER BY CUST, MAX_QUANT DESC ) T2
+-- GROUP BY T2.cust,  T2.PROD, T1.STATE
+-- ORDER BY T2.CUST
+
+-- (select cust, min(quant) AS MIN_QUANT, prod from sales
+-- where cust in (select distinct(cust) from sales) 
+-- group by cust,prod
+-- order by cust, min_quant)
+
+
+
+
+-- SELECT * FROM
+-- (select cust, prod, month ,sum(quant) as total from sales 
+--  group by month, prod,  cust
+-- order by cust, prod, month) S1
+-- NATURAL FULL JOIN
+-- (select * 
+-- FROM (select distinct(cust) from sales) I1,
+-- (select distinct(prod) from sales)I2,
+-- (select distinct(month) from sales)I3
+-- ORDER BY
+-- CUST,PROD,MONTH) S2
+
+ 
+

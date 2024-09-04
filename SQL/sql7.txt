@@ -1,0 +1,50 @@
+
+
+
+	1.	For each customer, compute the maximum and minimum sales quantities along with the corresponding products, dates (i.e., products for those maximum and minimum purchases, and the dates when those maximum and minimum sales quantities were made) and the states in which the sale transactions took place. If there are >1 occurrences of the max or min, choose one – do not display all.  For each customer, also compute the average sales quantity. 
+
+
+SELECT T1.CUST, MAX_PROD, MAX_QUANT, MAX_STATE ,max_date , MIN_PROD , MIN_QUANT, MIN_STATE , min_date, T3.AVERG
+FROM 
+(SELECT PROD AS MAX_PROD, MAX_QUANT, S2.CUST, S1.STATE AS MAX_STATE, concat(month,'/',day,'/',year) as max_date  FROM SALES S1 NATURAL FULL JOIN
+(Select cust, max(quant) AS MAX_QUANT from sales
+where cust in (select distinct(cust) from sales) 
+group by cust
+ORDER BY CUST) S2
+WHERE QUANT = MAX_QUANT ) T1
+NATURAL FULL JOIN
+(SELECT PROD AS MIN_PROD , MIN_QUANT, S2.CUST, S1.STATE AS MIN_STATE , concat(month,'/',day,'/',year) as min_date FROM SALES S1 NATURAL FULL JOIN
+(Select cust, min(quant) AS MIN_QUANT from sales
+where cust in (select distinct(cust) from sales) 
+group by cust
+ORDER BY CUST) S2
+WHERE QUANT = MIN_QUANT ) T2
+NATURAL FULL JOIN
+(Select cust, round(avg(quant),2) AVERG from sales 
+group by cust) T3
+ORDER BY T1.CUST
+
+
+ 2.      For each combination of customer and product, output the minimum sales quantities for January (regardless of the year, that is, both 1/11/2000 and 1/23/2008 are considered sales transactions for January) and maximum sales quantities for February and March (again, regardless of the year) in 3 separate columns. Like the first report, display the corresponding dates (i.e., dates of those maximum and minimum sales quantities). Furthermore, for January (MIN), include only the sales that occurred after 1999 (that is, not to include sales that occurred in 1999 or earlier); for February (MAX) and March (MAX), include all sales. 
+	
+	SELECT * FROM
+		( SELECT CUST, PROD, quant AS JAN_MIN, CONCAT(month,'/',day,'/',year) AS JAN_DATE FROM SALES a WHERE quant = (select min(quant) from sales where cust = a.cust and prod = a.prod  and MONTH = 01 GROUP BY CUST, PROD )  ORDER BY CUST ) T1 NATURAL FULL JOIN
+	    ( SELECT CUST, PROD, quant AS FEB_MAX, CONCAT(month,'/',day,'/',year) AS FEB_DATE FROM SALES b WHERE quant = (select MAX(quant) from sales where cust = b.cust and prod = b.prod  and MONTH = 02 GROUP BY CUST, PROD )  ORDER BY CUST ) T2 NATURAL FULL JOIN
+	    ( SELECT CUST, PROD, quant AS MAR_MAX, CONCAT(month,'/',day,'/',year) AS MAR_DATE FROM SALES c WHERE quant = (select MAX(quant) from sales where cust = c.cust and prod = c.prod  and MONTH = 03 GROUP BY CUST, PROD  ) ORDER BY CUST ) T3 NATURAL FULL JOIN
+		(SELECT * FROM 
+		(select distinct(cust) from sales) S1,
+		(select distinct(prod) from sales ) S2
+		) T4
+		ORDER BY CUST,PROD
+
+
+	3.      Show for each product, the total sales quantities for 4 quarters, Q1, Q2, Q3 and Q4 (in four separate columns) – Q1 being the first 3 months of the year (Jan, Feb & Mar), Q2 the next 3 months (Apr, May & Jun), and so on – ignore the YEAR component of the dates (i.e., 6/15/2005 is considered the same date as 6/15/2002, etc.). 
+	
+SELECT  T1.PROD, Q1_TOTAL, Q2_TOTAL, Q3_TOTAL, Q4_TOTAL FROM
+(SELECT DISTINCT(PROD) prod,  SUM(QUANT) AS Q1_TOTAL FROM sales WHERE MONTH IN (01,02,03) GROUP BY PROD ORDER BY PROD) T1,
+(SELECT DISTINCT(PROD) prod,  SUM(QUANT) AS Q2_TOTAL FROM sales WHERE MONTH IN (04,05,06) GROUP BY PROD ORDER BY PROD) T2,
+(SELECT DISTINCT(PROD) prod,  SUM(QUANT) AS Q3_TOTAL FROM sales WHERE MONTH IN (07,08,09) GROUP BY PROD ORDER BY PROD) T3,
+(SELECT DISTINCT(PROD) prod,  SUM(QUANT) AS Q4_TOTAL FROM sales WHERE MONTH IN (10,11,12) GROUP BY PROD ORDER BY PROD) T4
+WHERE  T1.PROD = T2.PROD AND T2.PROD = T3.PROD AND T3.PROD = T4.PROD
+		
+
